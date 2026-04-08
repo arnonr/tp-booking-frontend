@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import BookingFormModal from '@/modules/booking/components/BookingFormModal.vue'
+import BookingDetailModal from '@/modules/booking/components/BookingDetailModal.vue'
 import { useBookingStore } from '@/modules/booking/stores/bookingStore'
 import { useBooking } from '@/composables/useBooking'
 import type { Booking, BookingStatus } from '@/types'
@@ -13,10 +14,25 @@ const { bookingStatuses } = useBooking()
 const showBookingModal = ref(false)
 const editingBooking = ref<Booking | undefined>(undefined)
 
+const showDetailModal = ref(false)
+const detailBooking = ref<Booking | null>(null)
+
+const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
-  const buddhistYear = d.getFullYear() + 543
-  return `${d.getDate()}/${d.getMonth() + 1}/${buddhistYear}`
+  const buddhistYear = (d.getFullYear() + 543) % 100
+  return `${d.getDate()} ${thaiMonths[d.getMonth()]} ${String(buddhistYear).padStart(2, '0')}`
+}
+
+function formatTime(timeStr: string): string {
+  return timeStr.slice(0, 5)
+}
+
+function roomLabel(booking: Booking): string {
+  if (!booking.room) return `ห้อง #${booking.roomId}`
+  const loc = [booking.room.building, booking.room.floor ? `ชั้น ${booking.room.floor}` : ''].filter(Boolean).join(' ')
+  return loc ? `${booking.room.name} · ${loc}` : booking.room.name
 }
 
 function setStatusFilter(status: BookingStatus | 'all') {
@@ -28,9 +44,21 @@ function openCreate() {
   showBookingModal.value = true
 }
 
+function openDetail(booking: Booking) {
+  detailBooking.value = booking
+  showDetailModal.value = true
+}
+
 function openEdit(booking: Booking) {
+  showDetailModal.value = false
   editingBooking.value = booking
   showBookingModal.value = true
+}
+
+function onDetailCancel() {
+  showDetailModal.value = false
+  detailBooking.value = null
+  store.fetchBookings()
 }
 
 function onModalDone() {
@@ -109,21 +137,21 @@ onMounted(() => {
 
       <!-- Booking Cards -->
       <div v-else class="space-y-3">
-        <router-link
+        <div
           v-for="booking in store.filteredBookings"
           :key="booking.id"
-          :to="`/bookings/${booking.id}`"
-          class="block rounded-xl border border-gray-200 bg-white p-4 transition hover:border-blue-300 hover:shadow-sm"
+          @click="openDetail(booking)"
+          class="block cursor-pointer rounded-xl border border-gray-200 bg-white p-4 transition hover:border-blue-300 hover:shadow-sm"
         >
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex-1 space-y-1">
               <div class="flex items-center gap-2">
-                <h3 class="font-medium text-gray-900">{{ booking.room?.name ?? `ห้อง #${booking.roomId}` }}</h3>
+                <h3 class="font-medium text-gray-900">{{ roomLabel(booking) }}</h3>
                 <StatusBadge :status="booking.status" />
               </div>
               <div class="flex flex-wrap gap-3 text-sm text-gray-500">
                 <span>{{ formatDate(booking.bookingDate) }}</span>
-                <span>{{ booking.startTime }} - {{ booking.endTime }}</span>
+                <span>{{ formatTime(booking.startTime) }} - {{ formatTime(booking.endTime) }}</span>
                 <span>{{ booking.attendeeCount }} คน</span>
               </div>
               <p class="text-sm text-gray-600 line-clamp-1">{{ booking.purpose }}</p>
@@ -133,19 +161,12 @@ onMounted(() => {
               <span v-if="booking.checkedIn" class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                 Check-in แล้ว
               </span>
-              <button
-                v-if="booking.status === 'pending'"
-                @click.prevent="openEdit(booking)"
-                class="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
-              >
-                แก้ไข
-              </button>
               <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
             </div>
           </div>
-        </router-link>
+        </div>
       </div>
 
       <!-- Pagination -->
@@ -172,6 +193,14 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <BookingDetailModal
+      :show="showDetailModal"
+      :booking="detailBooking"
+      @close="showDetailModal = false; detailBooking = null"
+      @edit="openEdit"
+      @cancel="onDetailCancel"
+    />
 
     <BookingFormModal
       :show="showBookingModal"
