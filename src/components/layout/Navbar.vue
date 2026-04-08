@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useAuthStore } from '@/modules/auth/stores/authStore'
-import NotificationBell from '@/components/ui/NotificationBell.vue'
+// import NotificationBell from '@/components/ui/NotificationBell.vue'
 import logo from '@/assets/logo.png'
 
 const auth = useAuthStore()
@@ -62,7 +62,7 @@ function logout() {
             </template>
 
             <!-- Notification Bell -->
-            <NotificationBell />
+            <!-- <NotificationBell /> -->
 
             <!-- User Menu -->
             <span class="text-sm text-gray-600">{{ auth.user?.fullName }}</span>
