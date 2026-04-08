@@ -52,7 +52,7 @@ function logout() {
           <router-link to="/rooms" class="text-gray-700 hover:text-blue-600">ห้องประชุม</router-link>
 
           <template v-if="isLoggedIn">
-            <router-link to="/bookings/calendar" class="text-gray-700 hover:text-blue-600">ปฏิทิน</router-link>
+
             <router-link to="/bookings" class="text-gray-700 hover:text-blue-600">การจองของฉัน</router-link>
 
             <template v-if="isAdmin">

@@ -20,6 +20,7 @@
     "@vueuse/core": "^13.0",
     "axios": "^1.9",
     "chart.js": "^4.4",
+    "dayjs": "^1.11.20",
     "pinia": "^3.0",
     "vee-validate": "^4.15",
     "vue": "^3.5",

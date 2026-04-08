@@ -54,6 +54,7 @@ const model = defineModel<string | number | null>()
   --vs-indicator-icon-size: 18px;
   --vs-menu-offset-top: 4px;
   --vs-font-family: inherit;
+  --vs-menu-z-index: 9999;
   --vs-indicator-icon-cursor: pointer;
   --vs-option-cursor: pointer;
 }
