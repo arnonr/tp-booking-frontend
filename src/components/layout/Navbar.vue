@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/modules/auth/stores/authStore'
 import NotificationBell from '@/components/ui/NotificationBell.vue'
+import logo from '@/assets/logo.png'
 
 const auth = useAuthStore()
 
@@ -43,7 +44,7 @@ function logout() {
       <div class="flex h-16 items-center justify-between">
         <!-- Logo -->
         <router-link to="/" class="text-xl font-bold text-blue-600">
-          TP Booking
+          <img :src="logo" alt="Logo" class="h-10" />
         </router-link>
 
         <!-- Nav Links -->
