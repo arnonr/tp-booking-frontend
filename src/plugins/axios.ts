@@ -8,12 +8,7 @@ const api = axios.create({
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      window.location.href = '/api/auth/sso/redirect'
-    }
-    return Promise.reject(error)
-  },
+  (error) => Promise.reject(error),
 )
 
 export default api

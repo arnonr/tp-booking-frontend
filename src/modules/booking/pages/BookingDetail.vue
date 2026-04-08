@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
+import BookingFormModal from '@/modules/booking/components/BookingFormModal.vue'
 import { useBookingStore } from '@/modules/booking/stores/bookingStore'
 import { useFeedbackStore } from '@/modules/feedback/stores/feedbackStore'
 import { useAuthStore } from '@/modules/auth/stores/authStore'
@@ -21,6 +22,7 @@ const isAdmin = computed(() => authStore.user?.role === 'admin')
 
 const showCancelConfirm = ref(false)
 const showFeedbackForm = ref(false)
+const showEditModal = ref(false)
 const feedbackForm = ref({ rating: 5, comment: '' })
 const message = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -249,6 +251,18 @@ onMounted(() => {
       <!-- Actions -->
       <div class="flex flex-wrap gap-3">
         <button
+          v-if="booking.status === 'pending'"
+          @click="showEditModal = true"
+          class="rounded-lg border border-blue-300 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+        >
+          <svg class="mr-1 inline h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          แก้ไขการจอง
+        </button>
+
+        <button
           v-if="_canCheckIn"
           @click="handleCheckIn"
           :disabled="bookingStore.isLoading"
@@ -355,5 +369,12 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <BookingFormModal
+      :show="showEditModal"
+      :booking="booking ?? undefined"
+      @close="showEditModal = false"
+      @done="showEditModal = false; bookingStore.fetchBookingById(bookingId)"
+    />
   </AppLayout>
 </template>

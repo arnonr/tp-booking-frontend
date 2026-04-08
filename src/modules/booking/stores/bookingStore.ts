@@ -70,6 +70,25 @@ export const useBookingStore = defineStore('booking', () => {
     }
   }
 
+  async function updateBooking(id: number, form: Partial<BookingFormData>) {
+    isLoading.value = true
+    error.value = null
+    try {
+      const { data } = await api.patch<Booking>(`/bookings/${id}`, form)
+      if (currentBooking.value?.id === id) {
+        currentBooking.value = data
+      }
+      const idx = bookings.value.findIndex((b) => b.id === id)
+      if (idx !== -1) bookings.value[idx] = data
+      return data
+    } catch (e: unknown) {
+      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'แก้ไขการจองไม่สำเร็จ'
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function cancelBooking(id: number) {
     isLoading.value = true
     error.value = null
@@ -110,14 +129,28 @@ export const useBookingStore = defineStore('booking', () => {
     isLoading.value = true
     error.value = null
     try {
-      const { data } = await api.get<CalendarEvent[]>('/bookings/calendar', {
+      const { data } = await api.get<Booking[]>('/bookings/calendar', {
         params: {
           roomId: params.roomId,
           dateFrom: params.dateFrom,
           dateTo: params.dateTo,
         },
       })
-      calendarEvents.value = data
+      calendarEvents.value = data.map((b) => {
+        const date = b.bookingDate.split('T')[0]
+        return {
+          id: String(b.id),
+          title: b.purpose,
+          start: `${date}T${b.startTime}`,
+          end: `${date}T${b.endTime}`,
+          resourceId: b.roomId,
+          extendedProps: {
+            bookingId: b.id,
+            status: b.status,
+            roomName: b.room?.name ?? `ห้อง ${b.roomId}`,
+          },
+        }
+      })
     } catch (e: unknown) {
       error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to load calendar'
     } finally {
@@ -155,6 +188,7 @@ export const useBookingStore = defineStore('booking', () => {
     fetchBookings,
     fetchBookingById,
     createBooking,
+    updateBooking,
     cancelBooking,
     checkIn,
     fetchCalendar,

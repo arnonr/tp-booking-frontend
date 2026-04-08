@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import BookingFormModal from '@/modules/booking/components/BookingFormModal.vue'
 import { useRoomStore } from '@/modules/rooms/stores/roomStore'
 import { useAuthStore } from '@/modules/auth/stores/authStore'
 
@@ -29,11 +30,10 @@ function formatDate(dateStr: string): string {
   return `${d.getDate()}/${d.getMonth() + 1}/${buddhistYear}`
 }
 
+const showBookingModal = ref(false)
+
 function bookThisRoom() {
-  router.push({
-    path: '/bookings/create',
-    query: { roomId: String(roomId.value), date: selectedDate.value },
-  })
+  showBookingModal.value = true
 }
 
 onMounted(() => {
@@ -222,5 +222,13 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <BookingFormModal
+      :show="showBookingModal"
+      :default-room-id="roomId"
+      :default-date="selectedDate"
+      @close="showBookingModal = false"
+      @done="showBookingModal = false"
+    />
   </AppLayout>
 </template>

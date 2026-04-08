@@ -64,6 +64,7 @@ export interface Booking {
   endTime: string
   purpose: string
   attendeeCount: number
+  additionalRequirements: string | null
   status: BookingStatus
   adminRemark: string | null
   approvedBy: number | null
@@ -85,6 +86,7 @@ export interface BookingFormData {
   endTime: string
   purpose: string
   attendeeCount: number
+  additionalRequirements?: string
 }
 
 export interface RecurringBookingFormData extends BookingFormData {

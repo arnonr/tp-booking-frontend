@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
+import BookingFormModal from '@/modules/booking/components/BookingFormModal.vue'
 import { useBookingStore } from '@/modules/booking/stores/bookingStore'
 import { useBooking } from '@/composables/useBooking'
-import type { BookingStatus } from '@/types'
+import type { Booking, BookingStatus } from '@/types'
 
-const router = useRouter()
 const store = useBookingStore()
 const { bookingStatuses } = useBooking()
+
+const showBookingModal = ref(false)
+const editingBooking = ref<Booking | undefined>(undefined)
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
@@ -21,8 +23,20 @@ function setStatusFilter(status: BookingStatus | 'all') {
   store.setStatusFilter(status)
 }
 
-function goToCreate() {
-  router.push('/bookings/create')
+function openCreate() {
+  editingBooking.value = undefined
+  showBookingModal.value = true
+}
+
+function openEdit(booking: Booking) {
+  editingBooking.value = booking
+  showBookingModal.value = true
+}
+
+function onModalDone() {
+  showBookingModal.value = false
+  editingBooking.value = undefined
+  store.fetchBookings()
 }
 
 onMounted(() => {
@@ -40,7 +54,7 @@ onMounted(() => {
           <p class="mt-1 text-sm text-gray-500">รายการจองห้องประชุมทั้งหมดของคุณ</p>
         </div>
         <button
-          @click="goToCreate"
+          @click="openCreate"
           class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
         >
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,6 +133,13 @@ onMounted(() => {
               <span v-if="booking.checkedIn" class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                 Check-in แล้ว
               </span>
+              <button
+                v-if="booking.status === 'pending'"
+                @click.prevent="openEdit(booking)"
+                class="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
+              >
+                แก้ไข
+              </button>
               <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
@@ -151,5 +172,12 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <BookingFormModal
+      :show="showBookingModal"
+      :booking="editingBooking"
+      @close="showBookingModal = false; editingBooking = undefined"
+      @done="onModalDone"
+    />
   </AppLayout>
 </template>

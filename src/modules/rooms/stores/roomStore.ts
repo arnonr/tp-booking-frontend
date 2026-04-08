@@ -124,7 +124,7 @@ export const useRoomStore = defineStore('room', () => {
       const { data } = await api.get<AvailabilitySlot[]>(`/rooms/${roomId}/availability`, {
         params: { date },
       })
-      availability.value = data
+      availability.value = Array.isArray(data) ? data : []
     } catch (e: unknown) {
       error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to load availability'
     } finally {
