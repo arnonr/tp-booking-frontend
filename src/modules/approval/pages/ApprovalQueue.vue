@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useApprovalStore, type ApprovalTab } from '@/modules/approval/stores/approvalStore'
+import BookingFormModal from '@/modules/booking/components/BookingFormModal.vue'
 import type { Booking } from '@/types'
 
 const store = useApprovalStore()
@@ -64,29 +65,21 @@ const showRejectModal = ref<number | null>(null)
 const showBulkRejectModal = ref(false)
 const bulkRemark = ref('')
 
-// Edit modal
+// Edit modal — reuse BookingFormModal
 const showEditModal = ref(false)
 const editTarget = ref<Booking | null>(null)
-const editForm = ref({
-  bookingDate: '',
-  startTime: '',
-  endTime: '',
-  purpose: '',
-  attendeeCount: 1,
-  additionalRequirements: '',
-})
 
 function openEdit(booking: Booking) {
   editTarget.value = booking
-  editForm.value = {
-    bookingDate: booking.bookingDate,
-    startTime: booking.startTime.slice(0, 5),
-    endTime: booking.endTime.slice(0, 5),
-    purpose: booking.purpose,
-    attendeeCount: booking.attendeeCount,
-    additionalRequirements: booking.additionalRequirements ?? '',
-  }
   showEditModal.value = true
+}
+
+function onEditDone(bookingId: number) {
+  showEditModal.value = false
+  editTarget.value = null
+  showToast('success', `แก้ไขการจอง #${bookingId} สำเร็จ`)
+  store.fetchByStatus(store.activeTab, store.pagination.page)
+  store.fetchTabCounts()
 }
 
 // ── Toast ──────────────────────────────────────────────────
@@ -146,21 +139,13 @@ async function handleCancel(id: number) {
   } catch { showToast('error', store.error ?? 'ยกเลิกไม่สำเร็จ') }
 }
 
-async function handleEditSave() {
-  if (!editTarget.value) return
+async function handleRevert(id: number, targetStatus: 'pending' | 'approved') {
+  const statusLabel: Record<string, string> = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว' }
+  if (!confirm(`ยืนยันย้อนสถานะกลับเป็น "${statusLabel[targetStatus]}"?`)) return
   try {
-    await store.adminUpdateBooking(editTarget.value.id, {
-      bookingDate: editForm.value.bookingDate,
-      startTime: editForm.value.startTime,
-      endTime: editForm.value.endTime,
-      purpose: editForm.value.purpose,
-      attendeeCount: Number(editForm.value.attendeeCount),
-      additionalRequirements: editForm.value.additionalRequirements || undefined,
-    })
-    showEditModal.value = false
-    editTarget.value = null
-    showToast('success', 'แก้ไขการจองสำเร็จ')
-  } catch { showToast('error', store.error ?? 'แก้ไขไม่สำเร็จ') }
+    await store.revertStatus(id, targetStatus)
+    showToast('success', `ย้อนสถานะเป็น "${statusLabel[targetStatus]}" สำเร็จ`)
+  } catch { showToast('error', store.error ?? 'ย้อนสถานะไม่สำเร็จ') }
 }
 
 // ── Tab / page navigation ──────────────────────────────────
@@ -357,12 +342,12 @@ onMounted(() => {
               :key="booking.id"
               :class="[
                 'transition-colors hover:bg-gray-50',
-                store.activeTab === 'pending' ? rowUrgencyClass(booking.bookingDate) : '',
+                booking.status === 'pending' ? rowUrgencyClass(booking.bookingDate) : '',
                 selectedIds.includes(booking.id) ? 'bg-indigo-50/50' : '',
               ]"
             >
               <!-- Checkbox (pending only) -->
-              <td v-if="store.activeTab === 'pending'" class="px-4 py-3">
+              <td v-if="booking.status === 'pending'" class="px-4 py-3">
                 <input type="checkbox"
                   :checked="selectedIds.includes(booking.id)"
                   @change="toggleSelect(booking.id)"
@@ -390,7 +375,7 @@ onMounted(() => {
                     {{ formatDate(booking.bookingDate) }} {{ formatTime(booking.startTime) }}–{{ formatTime(booking.endTime) }} น.
                   </span>
                   <span
-                    v-if="store.activeTab === 'pending' && urgencyBadge(booking.bookingDate)"
+                    v-if="booking.status === 'pending' && urgencyBadge(booking.bookingDate)"
                     :class="['rounded-full px-1.5 py-0.5 text-xs font-semibold', urgencyBadge(booking.bookingDate)!.cls]"
                   >
                     {{ urgencyBadge(booking.bookingDate)!.label }}
@@ -401,7 +386,7 @@ onMounted(() => {
               <!-- Purpose -->
               <td class="max-w-[160px] px-4 py-3">
                 <p class="truncate text-sm text-gray-700">{{ booking.purpose }}</p>
-                <p v-if="booking.adminRemark && store.activeTab === 'rejected'"
+                <p v-if="booking.adminRemark && booking.status === 'rejected'"
                   class="mt-0.5 truncate text-xs text-red-500">
                   หมายเหตุ: {{ booking.adminRemark }}
                 </p>
@@ -414,7 +399,7 @@ onMounted(() => {
               <td class="px-4 py-3">
                 <div class="flex items-center justify-end gap-1.5">
                   <!-- pending: approve + reject -->
-                  <template v-if="store.activeTab === 'pending'">
+                  <template v-if="booking.status === 'pending'">
                     <button @click="handleApprove(booking.id)"
                       class="inline-flex items-center gap-1 rounded-md bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700 ring-1 ring-green-200 hover:bg-green-100">
                       ✓ อนุมัติ
@@ -425,22 +410,45 @@ onMounted(() => {
                     </button>
                   </template>
 
-                  <!-- edit (pending / approved / rejected) -->
+                  <!-- approved: cancel -->
                   <button
-                    v-if="['pending', 'approved', 'rejected'].includes(store.activeTab)"
+                    v-if="booking.status === 'approved'"
+                    @click="handleCancel(booking.id)"
+                    class="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+                  >
+                    ยกเลิก
+                  </button>
+
+                  <!-- edit (all except completed) -->
+                  <button
+                    v-if="booking.status !== 'completed'"
                     @click="openEdit(booking)"
                     class="rounded-md bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100"
                   >
                     ✎ แก้ไข
                   </button>
 
-                  <!-- cancel (approved only) -->
+                  <!-- revert: terminal states can go back -->
                   <button
-                    v-if="store.activeTab === 'approved'"
-                    @click="handleCancel(booking.id)"
-                    class="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+                    v-if="booking.status === 'rejected'"
+                    @click="handleRevert(booking.id, 'pending')"
+                    class="inline-flex items-center gap-1 rounded-md bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 ring-1 ring-violet-200 hover:bg-violet-100"
                   >
-                    ยกเลิก
+                    ↩ ย้อนกลับ
+                  </button>
+                  <button
+                    v-if="booking.status === 'cancelled'"
+                    @click="handleRevert(booking.id, 'approved')"
+                    class="inline-flex items-center gap-1 rounded-md bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 ring-1 ring-violet-200 hover:bg-violet-100"
+                  >
+                    ↩ ย้อนกลับ
+                  </button>
+                  <button
+                    v-if="booking.status === 'completed'"
+                    @click="handleRevert(booking.id, 'approved')"
+                    class="inline-flex items-center gap-1 rounded-md bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-700 ring-1 ring-violet-200 hover:bg-violet-100"
+                  >
+                    ↩ ย้อนกลับ
                   </button>
 
                   <!-- view detail -->
@@ -547,66 +555,13 @@ onMounted(() => {
       </Transition>
     </Teleport>
 
-    <!-- ── Edit Modal ── -->
-    <Teleport to="body">
-      <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0">
-        <div v-if="showEditModal"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          @click.self="showEditModal = false">
-          <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 class="mb-4 text-base font-semibold text-gray-900">
-              แก้ไขการจอง #{{ editTarget?.id }}
-              <span class="ml-2 text-xs font-normal text-gray-400">(สถานะไม่เปลี่ยน)</span>
-            </h3>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-xs font-medium text-gray-600">วันที่จอง</label>
-                <input v-model="editForm.bookingDate" type="date"
-                  class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-medium text-gray-600">เวลาเริ่ม</label>
-                  <input v-model="editForm.startTime" type="time"
-                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-600">เวลาสิ้นสุด</label>
-                  <input v-model="editForm.endTime" type="time"
-                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                </div>
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-600">วัตถุประสงค์</label>
-                <input v-model="editForm.purpose" type="text"
-                  class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-600">จำนวนผู้เข้าร่วม</label>
-                <input v-model="editForm.attendeeCount" type="number" min="1"
-                  class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-600">ความต้องการเพิ่มเติม</label>
-                <textarea v-model="editForm.additionalRequirements" rows="2"
-                  class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-                  placeholder="ระบุหากมี..." />
-              </div>
-            </div>
-            <div class="mt-5 flex justify-end gap-2">
-              <button @click="showEditModal = false"
-                class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                ยกเลิก
-              </button>
-              <button @click="handleEditSave"
-                class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-                บันทึกการแก้ไข
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- ── Edit Modal (reuse BookingFormModal) ── -->
+    <BookingFormModal
+      :show="showEditModal"
+      :booking="editTarget ?? undefined"
+      @close="showEditModal = false; editTarget = null"
+      @done="onEditDone"
+    />
 
     <!-- ── Toast ── -->
     <Teleport to="body">

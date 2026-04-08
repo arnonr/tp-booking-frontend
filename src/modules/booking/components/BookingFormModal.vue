@@ -69,9 +69,11 @@ function stringToTime(s: string): { hours: number; minutes: number } | null {
   return { hours: h, minutes: m }
 }
 
-// sync picker → form (date)
+// sync picker → form (date) — normalize Date objects to YYYY-MM-DD
 watch(pickerDate, (d) => {
-  form.value.bookingDate = d ?? ''
+  if (!d) { form.value.bookingDate = ''; return }
+  if (d instanceof Date) { form.value.bookingDate = d.toISOString().slice(0, 10); return }
+  form.value.bookingDate = String(d).slice(0, 10)
 })
 
 // sync picker → form (time)
@@ -102,11 +104,20 @@ function selectSlot(slot: { startTime: string; endTime: string }) {
   pickerEndTime.value = stringToTime(slot.endTime)
 }
 
+// Normalize bookingDate to YYYY-MM-DD regardless of what VueDatePicker returns
+function normalizeDate(v: string | Date | null): string {
+  if (!v) return ''
+  if (v instanceof Date) return v.toISOString().slice(0, 10)
+  return String(v).slice(0, 10)
+}
+
 async function handleSubmit() {
   message.value = null
   showConflictWarning.value = false
 
-  if (!form.value.roomId || !form.value.bookingDate || !form.value.startTime || !form.value.endTime) {
+  const bookingDate = normalizeDate(form.value.bookingDate)
+
+  if (!form.value.roomId || !bookingDate || !form.value.startTime || !form.value.endTime) {
     message.value = { type: 'error', text: 'กรุณากรอกข้อมูลให้ครบถ้วน' }
     return
   }
@@ -114,7 +125,7 @@ async function handleSubmit() {
   try {
     if (isEditMode.value && props.booking) {
       await bookingStore.updateBooking(props.booking.id, {
-        bookingDate: form.value.bookingDate,
+        bookingDate,
         startTime: form.value.startTime,
         endTime: form.value.endTime,
         purpose: form.value.purpose,
@@ -125,8 +136,8 @@ async function handleSubmit() {
     } else {
 
       const created = await bookingStore.createBooking({
-        roomId: form.value.roomId,
-        bookingDate: form.value.bookingDate,
+        roomId: form.value.roomId!,
+        bookingDate,
         startTime: form.value.startTime,
         endTime: form.value.endTime,
         purpose: form.value.purpose,

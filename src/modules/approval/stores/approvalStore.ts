@@ -114,6 +114,24 @@ export const useApprovalStore = defineStore('approval', () => {
     }
   }
 
+  // ── Revert booking status (admin) ────────────────────
+  async function revertStatus(id: number, targetStatus: BookingStatus) {
+    try {
+      const { data: updated } = await api.patch<Booking>(`/bookings/${id}/revert`, {
+        status: targetStatus,
+      })
+      // Remove from current tab list (it moved to another tab)
+      bookingsList.value = bookingsList.value.filter((b) => b.id !== id)
+      // Recount all tabs
+      await fetchTabCounts()
+      return updated
+    } catch (e: unknown) {
+      error.value =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'ย้อนสถานะไม่สำเร็จ'
+      throw e
+    }
+  }
+
   // ── Admin update booking ───────────────────────────────
   async function adminUpdateBooking(
     id: number,
@@ -160,6 +178,7 @@ export const useApprovalStore = defineStore('approval', () => {
     reject,
     bulkAction,
     cancelBooking,
+    revertStatus,
     adminUpdateBooking,
   }
 })
