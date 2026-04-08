@@ -25,10 +25,9 @@ export const useUserStore = defineStore('user-management', () => {
 
   async function updateUserRole(id: number, role: User['role']) {
     try {
-      const { data } = await api.put<User>(`/users/${id}`, { role })
+      await api.put(`/users/${id}`, { role })
       const idx = users.value.findIndex((u) => u.id === id)
-      if (idx !== -1) users.value[idx] = data
-      return data
+      if (idx !== -1) users.value[idx] = { ...users.value[idx], role }
     } catch (e: unknown) {
       error.value =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -39,10 +38,9 @@ export const useUserStore = defineStore('user-management', () => {
 
   async function toggleUserStatus(id: number, isActive: boolean) {
     try {
-      const { data } = await api.patch<User>(`/users/${id}/status`, { isActive })
+      await api.patch(`/users/${id}/status`, { isActive })
       const idx = users.value.findIndex((u) => u.id === id)
-      if (idx !== -1) users.value[idx] = data
-      return data
+      if (idx !== -1) users.value[idx] = { ...users.value[idx], isActive }
     } catch (e: unknown) {
       error.value =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??

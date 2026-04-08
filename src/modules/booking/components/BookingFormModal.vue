@@ -72,7 +72,6 @@ function stringToTime(s: string): { hours: number; minutes: number } | null {
 // sync picker → form (date) — normalize Date objects to YYYY-MM-DD
 watch(pickerDate, (d) => {
   if (!d) { form.value.bookingDate = ''; return }
-  if (d instanceof Date) { form.value.bookingDate = d.toISOString().slice(0, 10); return }
   form.value.bookingDate = String(d).slice(0, 10)
 })
 

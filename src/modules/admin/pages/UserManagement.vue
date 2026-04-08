@@ -107,7 +107,7 @@ onMounted(() => {
     <!-- Header -->
     <div>
       <h1 class="text-2xl font-bold text-gray-900">จัดการผู้ใช้งาน</h1>
-      <p class="mt-1 text-sm text-gray-500">จัดการสิทธิ์และสถานะพนักงานทั้งหมดในระบบ</p>
+      <p class="mt-1 text-sm text-gray-500">จัดการสิทธิ์และสถานะผู้ใช้งานทั้งหมดในระบบ</p>
     </div>
 
     <!-- Stats Row -->
@@ -238,7 +238,7 @@ onMounted(() => {
               <!-- Confirm toggle -->
               <div v-if="confirmToggleId === user.id" class="flex items-center justify-center gap-2">
                 <span class="text-xs font-medium text-gray-600">ยืนยัน{{ user.isActive ? 'ระงับ' : 'เปิดใช้งาน'
-                }}?</span>
+                  }}?</span>
                 <button @click="toggleStatus(user)" :class="[
                   'rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition',
                   user.isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700',

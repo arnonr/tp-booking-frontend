@@ -87,11 +87,15 @@ export interface BookingFormData {
   purpose: string
   attendeeCount: number
   additionalRequirements?: string
+  bookerName?: string
+  bookerPhone?: string
 }
 
 export interface RecurringBookingFormData extends BookingFormData {
   recurringType: 'weekly' | 'monthly'
   recurringEndDate: string
+  bookerName?: string
+  bookerPhone?: string
 }
 
 export interface CalendarEvent {
