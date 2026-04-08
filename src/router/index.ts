@@ -108,16 +108,6 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/modules/admin/pages/UserManagement.vue'),
       },
       {
-        path: 'users/create',
-        name: 'admin-users-create',
-        component: () => import('@/modules/admin/pages/UserForm.vue'),
-      },
-      {
-        path: 'users/:id/edit',
-        name: 'admin-users-edit',
-        component: () => import('@/modules/admin/pages/UserForm.vue'),
-      },
-      {
         path: 'rooms',
         name: 'admin-rooms',
         component: () => import('@/modules/admin/pages/AdminRoomManagement.vue'),

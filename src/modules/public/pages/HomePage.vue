@@ -88,7 +88,7 @@ onMounted(() => {
 <template>
   <AppLayout>
     <!-- Hero Section -->
-    <section
+    <!-- <section
       class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 py-16 text-white sm:px-12 sm:py-20">
       <div class="absolute inset-0 opacity-10">
         <div class="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/20 blur-3xl" />
@@ -102,7 +102,7 @@ onMounted(() => {
           ค้นหาห้องประชุม — เลือกช่วงเวลา จองได้ทันที
         </p>
       </div>
-    </section>
+    </section> -->
 
     <!-- Calendar Section -->
     <section class="mt-8">

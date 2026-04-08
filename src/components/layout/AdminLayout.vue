@@ -19,7 +19,7 @@ import AppFooter from './AppFooter.vue'
             <router-link to="/admin/users"
               class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
               active-class="bg-indigo-50 text-indigo-600 font-medium">
-              จัดการพนักงาน
+              จัดการผู้ใช้งาน
             </router-link>
             <router-link to="/admin/rooms"
               class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
