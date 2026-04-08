@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
+import { th } from 'date-fns/locale'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BookingFormModal from '@/modules/booking/components/BookingFormModal.vue'
 import { useRoomStore } from '@/modules/rooms/stores/roomStore'
 import { useAuthStore } from '@/modules/auth/stores/authStore'
+import { useDate } from '@/composables/useDate'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,19 +20,16 @@ const selectedDate = ref(new Date().toISOString().split('T')[0])
 const activeImageIndex = ref(0)
 
 const room = computed(() => roomStore.currentRoom)
-
 const isLoggedIn = computed(() => !!authStore.user)
 
-const dayNames: Record<string, string> = {
-  mon: 'จันทร์', tue: 'อังคาร', wed: 'พุธ', thu: 'พฤหัสบดี',
-  fri: 'ศุกร์', sat: 'เสาร์', sun: 'อาทิตย์',
+const statusConfig: Record<string, { text: string; cls: string }> = {
+  active:      { text: 'พร้อมใช้งาน',          cls: 'bg-green-100 text-green-800' },
+  maintenance: { text: 'อยู่ระหว่างปรับปรุง',   cls: 'bg-yellow-100 text-yellow-800' },
+  inactive:    { text: 'ปิดให้บริการ',           cls: 'bg-red-100 text-red-800' },
 }
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  const buddhistYear = d.getFullYear() + 543
-  return `${d.getDate()}/${d.getMonth() + 1}/${buddhistYear}`
-}
+const { formatDate } = useDate()
+const today = new Date().toISOString().split('T')[0]
 
 const showBookingModal = ref(false)
 
@@ -36,8 +37,17 @@ function bookThisRoom() {
   showBookingModal.value = true
 }
 
-onMounted(() => {
-  roomStore.fetchRoomById(roomId.value)
+function onDateChange() {
+  if (isLoggedIn.value) {
+    roomStore.fetchAvailability(roomId.value, selectedDate.value)
+  }
+}
+
+onMounted(async () => {
+  await roomStore.fetchRoomById(roomId.value)
+  if (isLoggedIn.value) {
+    roomStore.fetchAvailability(roomId.value, selectedDate.value)
+  }
 })
 </script>
 
@@ -106,7 +116,14 @@ onMounted(() => {
 
           <!-- Info Card -->
           <div class="rounded-xl border border-gray-200 bg-white p-6">
-            <h1 class="text-2xl font-bold text-gray-900">{{ room.name }}</h1>
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <h1 class="text-2xl font-bold text-gray-900">{{ room.name }}</h1>
+              <span
+                :class="['rounded-full px-3 py-1 text-xs font-medium', statusConfig[room.status]?.cls ?? 'bg-gray-100 text-gray-700']"
+              >
+                {{ statusConfig[room.status]?.text ?? room.status }}
+              </span>
+            </div>
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
               <div class="flex items-center gap-2 text-sm text-gray-600">
@@ -167,44 +184,80 @@ onMounted(() => {
           <div class="rounded-xl border border-gray-200 bg-white p-6">
             <h2 class="text-lg font-semibold text-gray-900">ตรวจสอบช่วงเวลาว่าง</h2>
 
-            <div class="mt-4">
-              <label class="block text-sm font-medium text-gray-700">เลือกวันที่</label>
-              <input
-                v-model="selectedDate"
-                type="date"
-                class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                @change="roomStore.fetchAvailability(roomId, selectedDate)"
-              />
-            </div>
-
-            <!-- Availability Slots -->
-            <div class="mt-4 space-y-2">
-              <div
-                v-for="slot in roomStore.availability"
-                :key="slot.startTime"
-                :class="[
-                  'flex items-center justify-between rounded-md px-3 py-2 text-sm',
-                  slot.isAvailable ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600',
-                ]"
-              >
-                <span>{{ slot.startTime }} - {{ slot.endTime }}</span>
-                <span class="text-xs font-medium">
-                  {{ slot.isAvailable ? 'ว่าง' : 'ไม่ว่าง' }}
-                </span>
+            <template v-if="isLoggedIn">
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700">เลือกวันที่</label>
+                <VueDatePicker
+                  v-model="selectedDate"
+                  :locale="th"
+                  model-type="yyyy-MM-dd"
+                  :min-date="today"
+                  auto-apply
+                  text-input
+                  class="mt-1"
+                  @update:model-value="onDateChange"
+                >
+                  <template #dp-input="{ onFocus, onBlur, toggleMenu }">
+                    <input
+                      type="text"
+                      :value="selectedDate ? formatDate(selectedDate) : ''"
+                      readonly
+                      @click="toggleMenu"
+                      @focus="onFocus"
+                      @blur="onBlur"
+                      class="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="เลือกวันที่"
+                    />
+                  </template>
+                  <template #year-overlay-value="{ text }">
+                    {{ parseInt(text) + 543 }}
+                  </template>
+                  <template #year="{ text }">
+                    {{ Number(text) + 543 }}
+                  </template>
+                </VueDatePicker>
               </div>
-              <p
-                v-if="roomStore.availability.length === 0 && !roomStore.isLoading"
-                class="py-4 text-center text-sm text-gray-400"
-              >
-                เลือกวันที่เพื่อดูช่วงเวลา
-              </p>
+
+              <!-- Availability Slots -->
+              <div class="mt-4 space-y-2">
+                <!-- Loading -->
+                <div v-if="roomStore.availabilityLoading" class="flex justify-center py-6">
+                  <div class="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                </div>
+
+                <template v-else>
+                  <div
+                    v-for="slot in roomStore.availability"
+                    :key="slot.startTime"
+                    :class="[
+                      'flex items-center justify-between rounded-md px-3 py-2 text-sm',
+                      slot.isAvailable ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600',
+                    ]"
+                  >
+                    <span>{{ slot.startTime }} - {{ slot.endTime }}</span>
+                    <span class="text-xs font-medium">
+                      {{ slot.isAvailable ? 'ว่าง' : 'ไม่ว่าง' }}
+                    </span>
+                  </div>
+                  <p
+                    v-if="roomStore.availability.length === 0"
+                    class="py-4 text-center text-sm text-gray-400"
+                  >
+                    ไม่พบช่วงเวลาในวันที่เลือก
+                  </p>
+                </template>
+              </div>
+            </template>
+
+            <div v-else class="mt-4 rounded-lg bg-blue-50 p-4 text-center text-sm text-blue-700">
+              กรุณาเข้าสู่ระบบเพื่อดูช่วงเวลาว่าง
             </div>
 
             <!-- Book Button -->
             <button
               v-if="isLoggedIn && room.status === 'active'"
               @click="bookThisRoom"
-              class="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              class="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
             >
               จองห้องนี้
             </button>

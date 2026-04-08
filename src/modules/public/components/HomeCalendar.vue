@@ -31,6 +31,7 @@ const roomStore = useRoomStore()
 const authStore = useAuthStore()
 
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
+const selectedBuildingId = ref<string | null>(null)
 const selectedRoomId = ref<number | null>(null)
 
 // ── Booking Modal ──
@@ -38,11 +39,18 @@ interface SelectedEvent {
   bookingId: number
   title: string
   roomName: string
+  roomLocation: string
+  roomCapacity: number | null
   date: string
   startTime: string
   endTime: string
   status: BookingStatus
   color: string
+  attendeeCount: number
+  additionalRequirements: string
+  bookerName: string
+  bookerDepartment: string
+  checkedIn: boolean
 }
 const showModal = ref(false)
 const selectedEvent = ref<SelectedEvent | null>(null)
@@ -70,9 +78,27 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
+const buildingOptions = computed(() => {
+  const buildings = [...new Set(
+    roomStore.rooms
+      .map((r) => r.building)
+      .filter((b): b is string => !!b)
+  )].sort()
+  return [
+    { label: 'ทุกอาคาร', value: null as string | null },
+    ...buildings.map((b) => ({ label: b, value: b as string | null })),
+  ]
+})
+
+const roomsForBuilding = computed(() =>
+  selectedBuildingId.value
+    ? roomStore.rooms.filter((r) => r.building === selectedBuildingId.value)
+    : roomStore.rooms
+)
+
 const roomOptions = computed(() => [
   { label: 'ทุกห้อง', value: null as number | null },
-  ...roomStore.rooms.map((r) => ({ label: r.name, value: r.id as number | null })),
+  ...roomsForBuilding.value.map((r) => ({ label: r.name, value: r.id as number | null })),
 ])
 
 const now = ref(new Date())
@@ -90,10 +116,23 @@ const roomColorMap = computed(() => {
   return map
 })
 
+const buildingRoomIds = computed(() => {
+  if (!selectedBuildingId.value) return null
+  return new Set(
+    roomStore.rooms
+      .filter((r) => r.building === selectedBuildingId.value)
+      .map((r) => r.id)
+  )
+})
+
 // Public homepage shows only approved bookings
 const calendarEvents = computed(() =>
   bookingStore.calendarEvents
-    .filter((evt) => evt.extendedProps?.status === 'approved')
+    .filter((evt) => {
+      if (evt.extendedProps?.status !== 'approved') return false
+      if (buildingRoomIds.value && !buildingRoomIds.value.has(evt.resourceId ?? -1)) return false
+      return true
+    })
     .map((evt) => {
       const roomId = evt.resourceId ?? 0
       const color = roomColorMap.value.get(roomId) ?? ROOM_COLORS[0]
@@ -198,11 +237,18 @@ function handleEventClick(info: EventClickArg) {
     bookingId: props?.bookingId,
     title: info.event.title,
     roomName: props?.roomName ?? '',
+    roomLocation: props?.roomLocation ?? '',
+    roomCapacity: props?.roomCapacity ?? null,
     date: formatDate(info.event.startStr),
     startTime: formatTime(info.event.startStr),
     endTime: info.event.endStr ? formatTime(info.event.endStr) : '',
     status: props?.status ?? 'approved',
     color: info.event.backgroundColor || ROOM_COLORS[0],
+    attendeeCount: props?.attendeeCount ?? 0,
+    additionalRequirements: props?.additionalRequirements ?? '',
+    bookerName: props?.bookerName ?? '',
+    bookerDepartment: props?.bookerDepartment ?? '',
+    checkedIn: props?.checkedIn ?? false,
   }
   showModal.value = true
 }
@@ -246,6 +292,17 @@ function handleDatesSet(arg: { startStr: string; endStr: string }) {
     dateTo: arg.endStr.split('T')[0],
   })
 }
+
+watch(selectedBuildingId, () => {
+  selectedRoomId.value = null
+  // selectedRoomId อาจยังเป็น null → watch ของมันไม่ fire จึง fetch เองที่นี่
+  const api = calendarRef.value?.getApi()
+  if (api) {
+    const start = api.view.activeStart.toISOString().split('T')[0]
+    const end = api.view.activeEnd.toISOString().split('T')[0]
+    bookingStore.fetchCalendar({ dateFrom: start, dateTo: end })
+  }
+})
 
 watch(selectedRoomId, () => {
   const api = calendarRef.value?.getApi()
@@ -298,6 +355,14 @@ onMounted(() => {
     <!-- Toolbar -->
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex items-center gap-2">
+        <!-- Building Filter -->
+        <AppSelect
+          v-model="selectedBuildingId"
+          :options="buildingOptions"
+          :is-searchable="true"
+          placeholder="ทุกอาคาร"
+          class="min-w-[240px]"
+        />
         <!-- Room Filter -->
         <AppSelect
           v-model="selectedRoomId"
@@ -373,7 +438,7 @@ onMounted(() => {
         <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeModal" />
 
         <!-- Panel -->
-        <div class="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+        <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
           <!-- Color header strip -->
           <div
             class="h-1.5 w-full rounded-t-2xl"
@@ -405,13 +470,16 @@ onMounted(() => {
 
             <!-- Info list -->
             <div class="mt-4 space-y-2.5 rounded-xl bg-gray-50 p-3.5 text-sm">
-              <div class="flex items-center gap-2.5">
-                <span class="text-base">🏢</span>
+              <!-- ห้องประชุม -->
+              <div class="flex items-start gap-2.5">
+                <span class="text-base mt-0.5">🏢</span>
                 <div>
                   <span class="text-xs text-gray-400">ห้องประชุม</span>
                   <p class="font-semibold text-gray-800">{{ selectedEvent.roomName }}</p>
+                  <p v-if="selectedEvent.roomLocation" class="text-xs text-gray-500">{{ selectedEvent.roomLocation }}</p>
                 </div>
               </div>
+              <!-- วันที่ & เวลา -->
               <div class="flex items-center gap-2.5">
                 <span class="text-base">📅</span>
                 <div>
@@ -426,11 +494,43 @@ onMounted(() => {
                   <p class="font-semibold text-gray-800">{{ selectedEvent.startTime }} – {{ selectedEvent.endTime }} น.</p>
                 </div>
               </div>
+              <!-- ผู้จอง -->
+              <div v-if="selectedEvent.bookerName" class="flex items-start gap-2.5">
+                <span class="text-base mt-0.5">👤</span>
+                <div>
+                  <span class="text-xs text-gray-400">ผู้จอง</span>
+                  <p class="font-semibold text-gray-800">{{ selectedEvent.bookerName }}</p>
+                  <p v-if="selectedEvent.bookerDepartment" class="text-xs text-gray-500">{{ selectedEvent.bookerDepartment }}</p>
+                </div>
+              </div>
+              <!-- จำนวนผู้เข้าร่วม -->
+              <div v-if="selectedEvent.attendeeCount" class="flex items-center gap-2.5">
+                <span class="text-base">👥</span>
+                <div>
+                  <span class="text-xs text-gray-400">จำนวนผู้เข้าร่วม</span>
+                  <p class="font-semibold text-gray-800">
+                    {{ selectedEvent.attendeeCount }} คน
+                    <span v-if="selectedEvent.roomCapacity" class="text-xs font-normal text-gray-400">(ความจุ {{ selectedEvent.roomCapacity }} คน)</span>
+                  </p>
+                </div>
+              </div>
+              <!-- ความต้องการเพิ่มเติม -->
+              <div v-if="selectedEvent.additionalRequirements" class="flex items-start gap-2.5">
+                <span class="text-base mt-0.5">📝</span>
+                <div>
+                  <span class="text-xs text-gray-400">ความต้องการเพิ่มเติม</span>
+                  <p class="font-semibold text-gray-800">{{ selectedEvent.additionalRequirements }}</p>
+                </div>
+              </div>
+              <!-- สถานะ -->
               <div class="flex items-center gap-2.5">
                 <span class="text-base">✅</span>
                 <div>
                   <span class="text-xs text-gray-400">สถานะ</span>
-                  <p class="font-semibold text-green-700">อนุมัติแล้ว</p>
+                  <p class="font-semibold text-green-700">
+                    อนุมัติแล้ว
+                    <span v-if="selectedEvent.checkedIn" class="ml-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">เช็คอินแล้ว</span>
+                  </p>
                 </div>
               </div>
             </div>

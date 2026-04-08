@@ -96,10 +96,10 @@ onMounted(() => {
       </div>
       <div class="relative z-10 mx-auto max-w-3xl text-center">
         <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
-          จองห้องประชุม<br class="sm:hidden" />ให้ง่าย ให้เร็ว
+          ระบบจองห้องประชุม<br class="sm:hidden" />
         </h1>
         <p class="mt-4 text-lg text-blue-100 sm:text-xl">
-          ค้นหาห้องประชุมที่เหมาะกับคุณ — เลือกช่วงเวลา จองได้ทันที
+          ค้นหาห้องประชุม — เลือกช่วงเวลา จองได้ทันที
         </p>
       </div>
     </section>
@@ -141,7 +141,7 @@ onMounted(() => {
         </div>
 
         <!-- Building -->
-        <div class="min-w-[140px]">
+        <div class="min-w-[240px]">
           <label class="mb-1 block text-sm font-medium text-gray-700">อาคาร</label>
           <AppSelect v-model="selectedBuilding" :options="buildingOptions" class="w-full" />
         </div>

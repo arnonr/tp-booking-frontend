@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { th } from 'date-fns/locale'
@@ -7,6 +8,7 @@ import { useDate } from '@/composables/useDate'
 import AppSelect from '@/components/common/AppSelect.vue'
 import { useBookingStore } from '@/modules/booking/stores/bookingStore'
 import { useRoomStore } from '@/modules/rooms/stores/roomStore'
+import { useToast } from '@/composables/useToast'
 import type { Booking } from '@/types'
 
 const props = defineProps<{
@@ -23,6 +25,8 @@ const emit = defineEmits<{
 
 const bookingStore = useBookingStore()
 const roomStore = useRoomStore()
+const toast = useToast()
+const router = useRouter()
 
 const form = ref({
   roomId: null as number | null,
@@ -129,7 +133,11 @@ async function handleSubmit() {
         attendeeCount: form.value.attendeeCount,
         additionalRequirements: form.value.additionalRequirements,
       })
-      if (created) emit('done', created.id)
+      if (created) {
+        toast.show('จองเรียบร้อยแล้ว! รอเจ้าหน้าที่อนุมัติการจองของคุณ', 'success')
+        emit('done', created.id)
+        router.push({ name: 'bookings' })
+      }
     }
   } catch {
     message.value = { type: 'error', text: bookingStore.error ?? 'เกิดข้อผิดพลาด' }

@@ -106,6 +106,14 @@ export interface CalendarEvent {
     bookingId: number
     status: BookingStatus
     roomName: string
+    roomLocation: string
+    roomCapacity: number | null
+    purpose: string
+    attendeeCount: number
+    additionalRequirements: string
+    bookerName: string
+    bookerDepartment: string
+    checkedIn: boolean
   }
 }
 

@@ -5,10 +5,12 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import AppSelect from '@/components/common/AppSelect.vue'
 import { useBookingStore } from '@/modules/booking/stores/bookingStore'
 import { useRoomStore } from '@/modules/rooms/stores/roomStore'
+import { useAuthStore } from '@/modules/auth/stores/authStore'
 
 const router = useRouter()
 const bookingStore = useBookingStore()
 const roomStore = useRoomStore()
+const authStore = useAuthStore()
 
 const form = ref({
   roomId: null as number | null,
@@ -19,6 +21,8 @@ const form = ref({
   attendeeCount: 1,
   recurringType: 'weekly' as 'weekly' | 'monthly',
   recurringEndDate: '',
+  bookerName: '',
+  bookerPhone: '',
 })
 
 const previewDates = ref<string[]>([])
@@ -86,6 +90,8 @@ async function handleSubmit() {
       attendeeCount: form.value.attendeeCount,
       recurringType: form.value.recurringType,
       recurringEndDate: form.value.recurringEndDate,
+      bookerName: form.value.bookerName,
+      bookerPhone: form.value.bookerPhone,
     })
 
     if (result) {
@@ -100,8 +106,11 @@ async function handleSubmit() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   roomStore.fetchAllRooms()
+  if (!authStore.user) await authStore.fetchUser()
+  form.value.bookerName = authStore.user?.fullName ?? ''
+  form.value.bookerPhone = authStore.user?.phone ?? ''
 })
 </script>
 
@@ -233,6 +242,28 @@ onMounted(() => {
         <div class="rounded-xl border border-gray-200 bg-white p-6">
           <h2 class="mb-4 text-lg font-semibold text-gray-900">รายละเอียด</h2>
           <div class="space-y-4">
+            <!-- ข้อมูลผู้จอง -->
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">ชื่อผู้จอง *</label>
+                <input
+                  v-model="form.bookerName"
+                  type="text"
+                  required
+                  class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  placeholder="ชื่อ-นามสกุล"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">เบอร์ติดต่อ</label>
+                <input
+                  v-model="form.bookerPhone"
+                  type="tel"
+                  class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  placeholder="เบอร์โทรศัพท์"
+                />
+              </div>
+            </div>
             <div>
               <label class="block text-sm font-medium text-gray-700">วัตถุประสงค์ *</label>
               <textarea

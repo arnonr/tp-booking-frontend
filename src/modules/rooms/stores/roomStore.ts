@@ -8,6 +8,7 @@ export const useRoomStore = defineStore('room', () => {
   const currentRoom = ref<Room | null>(null)
   const availability = ref<AvailabilitySlot[]>([])
   const isLoading = ref(false)
+  const availabilityLoading = ref(false)
   const error = ref<string | null>(null)
   const pagination = ref({ page: 1, limit: 10, total: 0 })
 
@@ -118,18 +119,49 @@ export const useRoomStore = defineStore('room', () => {
   }
 
   async function fetchAvailability(roomId: number, date: string) {
-    isLoading.value = true
+    availabilityLoading.value = true
     error.value = null
     try {
-      const { data } = await api.get<AvailabilitySlot[]>(`/rooms/${roomId}/availability`, {
-        params: { date },
-      })
-      availability.value = Array.isArray(data) ? data : []
+      const { data } = await api.get<{
+        openTime: string
+        closeTime: string
+        slotDurationMin: number
+        bookedSlots: { startTime: string; endTime: string }[]
+      }>(`/rooms/${roomId}/availability`, { params: { date } })
+
+      availability.value = generateSlots(data.openTime, data.closeTime, data.slotDurationMin, data.bookedSlots ?? [])
     } catch (e: unknown) {
-      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to load availability'
+      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'โหลดช่วงเวลาว่างไม่สำเร็จ'
     } finally {
-      isLoading.value = false
+      availabilityLoading.value = false
     }
+  }
+
+  function generateSlots(
+    openTime: string,
+    closeTime: string,
+    slotDurationMin: number,
+    bookedSlots: { startTime: string; endTime: string }[],
+  ): AvailabilitySlot[] {
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map(Number)
+      return h * 60 + m
+    }
+    const toTime = (min: number) =>
+      `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
+
+    const slots: AvailabilitySlot[] = []
+    const open = toMin(openTime)
+    const close = toMin(closeTime)
+
+    for (let start = open; start + slotDurationMin <= close; start += slotDurationMin) {
+      const end = start + slotDurationMin
+      const startTime = toTime(start)
+      const endTime = toTime(end)
+      const isBooked = bookedSlots.some(b => b.startTime < endTime && b.endTime > startTime)
+      slots.push({ startTime, endTime, isAvailable: !isBooked })
+    }
+    return slots
   }
 
   async function uploadImages(roomId: number, files: File[]) {
@@ -168,6 +200,7 @@ export const useRoomStore = defineStore('room', () => {
     currentRoom,
     availability,
     isLoading,
+    availabilityLoading,
     error,
     pagination,
     fetchRooms,

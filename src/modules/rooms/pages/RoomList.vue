@@ -7,50 +7,84 @@ import { useRoomStore } from '@/modules/rooms/stores/roomStore'
 
 const store = useRoomStore()
 const search = ref('')
-const capacityFilter = ref<number | null>(null)
+const selectedBuilding = ref('')
+const selectedCapacity = ref('')
+const selectedAmenityId = ref<number | null>(null)
 const statusFilter = ref<string>('active')
 
+const rooms = computed(() => store.rooms ?? [])
+
+const buildings = computed(() => {
+  const set = new Set<string>()
+  for (const r of rooms.value) {
+    if (r.building) set.add(r.building)
+  }
+  return Array.from(set).sort()
+})
+
+const allAmenities = computed(() => {
+  const map = new Map<number, { id: number; name: string }>()
+  for (const r of rooms.value) {
+    for (const a of r.amenities ?? []) {
+      if (!map.has(a.id)) map.set(a.id, { id: a.id, name: a.name })
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'th'))
+})
+
+const buildingOptions = computed(() => [
+  { label: 'ทั้งหมด', value: '' },
+  ...buildings.value.map((b) => ({ label: b, value: b })),
+])
+
 const capacityOptions = [
-  { label: 'ทุกขนาด', value: null as number | null },
-  { label: '1-10 คน', value: 10 as number | null },
-  { label: '11-20 คน', value: 20 as number | null },
-  { label: '21-50 คน', value: 50 as number | null },
-  { label: '50+ คน', value: 51 as number | null },
+  { label: 'ทุกขนาด', value: '' },
+  { label: '5+ คน', value: '5' },
+  { label: '10+ คน', value: '10' },
+  { label: '20+ คน', value: '20' },
+  { label: '50+ คน', value: '50' },
 ]
 
+const amenityOptions = computed(() => [
+  { label: 'ทั้งหมด', value: null as number | null },
+  ...allAmenities.value.map((a) => ({ label: a.name, value: a.id as number | null })),
+])
+
 const statusOptions = [
+  { label: 'ทั้งหมด', value: '' },
   { label: 'พร้อมใช้งาน', value: 'active' },
   { label: 'ปรับปรุง', value: 'maintenance' },
-  { label: 'ทั้งหมด', value: '' },
 ]
 
 const filteredRooms = computed(() => {
-  let result = store.rooms
-
-  if (search.value) {
-    const q = search.value.toLowerCase()
-    result = result.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.building?.toLowerCase().includes(q) ||
-        r.description?.toLowerCase().includes(q),
-    )
-  }
-
-  if (capacityFilter.value !== null) {
-    if (capacityFilter.value === 51) {
-      result = result.filter((r) => r.capacity > 50)
-    } else {
-      result = result.filter((r) => r.capacity <= (capacityFilter.value ?? Infinity))
+  return rooms.value.filter((room) => {
+    if (search.value) {
+      const q = search.value.toLowerCase()
+      const matchName = room.name.toLowerCase().includes(q)
+      const matchDesc = room.description?.toLowerCase().includes(q) ?? false
+      if (!matchName && !matchDesc) return false
     }
-  }
-
-  if (statusFilter.value) {
-    result = result.filter((r) => r.status === statusFilter.value)
-  }
-
-  return result
+    if (selectedBuilding.value && room.building !== selectedBuilding.value) return false
+    if (selectedCapacity.value) {
+      const min = Number(selectedCapacity.value)
+      if (room.capacity < min) return false
+    }
+    if (selectedAmenityId.value !== null) {
+      const hasAmenity = room.amenities?.some((a) => a.id === selectedAmenityId.value) ?? false
+      if (!hasAmenity) return false
+    }
+    if (statusFilter.value && room.status !== statusFilter.value) return false
+    return true
+  })
 })
+
+function clearFilters() {
+  search.value = ''
+  selectedBuilding.value = ''
+  selectedCapacity.value = ''
+  selectedAmenityId.value = null
+  statusFilter.value = 'active'
+}
 
 onMounted(() => {
   store.fetchAllRooms()
@@ -81,25 +115,52 @@ onMounted(() => {
       </div>
 
       <!-- Filters -->
-      <div class="flex flex-col gap-3 sm:flex-row">
-        <div class="relative flex-1">
-          <svg
-            class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            v-model="search"
-            type="text"
-            placeholder="ค้นหาชื่อห้อง, อาคาร..."
-            class="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+      <div class="flex flex-wrap items-end gap-3">
+        <!-- Search -->
+        <div class="min-w-0 flex-1 sm:min-w-[200px]">
+          <label class="mb-1 block text-sm font-medium text-gray-700">ค้นหา</label>
+          <div class="relative">
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input v-model="search" type="text" placeholder="ชื่อห้อง, คำอธิบาย..."
+              class="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          </div>
         </div>
 
-        <AppSelect v-model="capacityFilter" :options="capacityOptions" class="min-w-[140px]" />
-        <AppSelect v-model="statusFilter" :options="statusOptions" class="min-w-[140px]" />
+        <!-- Building -->
+        <div class="min-w-[160px]">
+          <label class="mb-1 block text-sm font-medium text-gray-700">อาคาร</label>
+          <AppSelect v-model="selectedBuilding" :options="buildingOptions" class="w-full" />
+        </div>
+
+        <!-- Capacity -->
+        <div class="min-w-[130px]">
+          <label class="mb-1 block text-sm font-medium text-gray-700">ความจุขั้นต่ำ</label>
+          <AppSelect v-model="selectedCapacity" :options="capacityOptions" class="w-full" />
+        </div>
+
+        <!-- Amenity -->
+        <div class="min-w-[160px]">
+          <label class="mb-1 block text-sm font-medium text-gray-700">อุปกรณ์</label>
+          <AppSelect v-model="selectedAmenityId" :options="amenityOptions" class="w-full" />
+        </div>
+
+        <!-- Status -->
+        <div class="min-w-[140px]">
+          <label class="mb-1 block text-sm font-medium text-gray-700">สถานะ</label>
+          <AppSelect v-model="statusFilter" :options="statusOptions" class="w-full" />
+        </div>
+
+        <!-- Clear -->
+        <button
+          v-if="search || selectedBuilding || selectedCapacity || selectedAmenityId !== null || statusFilter"
+          @click="clearFilters"
+          class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50">
+          ล้างตัวกรอง
+        </button>
       </div>
 
       <!-- Loading -->
@@ -108,16 +169,17 @@ onMounted(() => {
       </div>
 
       <!-- Empty -->
-      <div
-        v-else-if="filteredRooms.length === 0"
-        class="flex flex-col items-center justify-center py-16 text-gray-500"
-      >
-        <svg class="mb-4 h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-else-if="filteredRooms.length === 0" class="py-20 text-center">
+        <svg class="mx-auto h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
-        <p class="text-lg font-medium">ไม่พบห้องประชุม</p>
-        <p class="text-sm">ลองปรับตัวกรองหรือคำค้นหา</p>
+        <p class="mt-4 text-lg font-medium text-gray-500">ไม่พบห้องที่ตรงกับเงื่อนไข</p>
+        <p class="mt-1 text-sm text-gray-400">ลองปรับตัวกรองหรือคำค้นหาใหม่</p>
+        <button @click="clearFilters"
+          class="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
+          ล้างตัวกรอง
+        </button>
       </div>
 
       <!-- Room Grid -->

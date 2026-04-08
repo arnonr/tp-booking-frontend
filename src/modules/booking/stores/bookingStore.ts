@@ -10,6 +10,13 @@ import type {
   BookingStatus,
 } from '@/types'
 
+function extractErrorMessage(e: unknown, fallback: string): string {
+  const res = (e as any)?.response?.data
+  if (typeof res === 'string' && res.length > 0) return res
+  if (typeof res?.message === 'string' && res.message.length > 0) return res.message
+  return fallback
+}
+
 export const useBookingStore = defineStore('booking', () => {
   const bookings = ref<Booking[]>([])
   const currentBooking = ref<Booking | null>(null)
@@ -63,7 +70,7 @@ export const useBookingStore = defineStore('booking', () => {
       const { data } = await api.post<Booking>('/bookings', form)
       return data
     } catch (e: unknown) {
-      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to create booking'
+      error.value = extractErrorMessage(e, 'Failed to create booking')
       throw e
     } finally {
       isLoading.value = false
@@ -82,7 +89,7 @@ export const useBookingStore = defineStore('booking', () => {
       if (idx !== -1) bookings.value[idx] = data
       return data
     } catch (e: unknown) {
-      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'แก้ไขการจองไม่สำเร็จ'
+      error.value = extractErrorMessage(e, 'แก้ไขการจองไม่สำเร็จ')
       throw e
     } finally {
       isLoading.value = false
@@ -148,6 +155,14 @@ export const useBookingStore = defineStore('booking', () => {
             bookingId: b.id,
             status: b.status,
             roomName: b.room?.name ?? `ห้อง ${b.roomId}`,
+            roomLocation: [b.room?.building, b.room?.floor ? `ชั้น ${b.room.floor}` : ''].filter(Boolean).join(' '),
+            roomCapacity: b.room?.capacity ?? null,
+            purpose: b.purpose,
+            attendeeCount: b.attendeeCount,
+            additionalRequirements: b.additionalRequirements ?? '',
+            bookerName: b.user?.fullName ?? b.user?.username ?? '',
+            bookerDepartment: b.user?.department ?? '',
+            checkedIn: b.checkedIn,
           },
         }
       })
