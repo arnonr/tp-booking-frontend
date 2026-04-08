@@ -250,6 +250,24 @@ export interface AuditLog {
   user?: User
 }
 
+// ── Dashboard ──
+export interface RoomStatusItem {
+  id: number
+  name: string
+  building: string | null
+  floor: string | null
+  capacity: number
+  status: 'active' | 'maintenance' | 'inactive'
+  currentBooking: {
+    id: number
+    purpose: string
+    endTime: string
+  } | null
+  nextBooking: {
+    startTime: string
+  } | null
+}
+
 // ── Pagination ──
 export interface PaginatedResponse<T> {
   data: T[]
