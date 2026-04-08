@@ -125,9 +125,9 @@ onMounted(() => {
         </svg>
         ห้องประชุม
       </h2>
-      <div class="flex flex-wrap items-end gap-3">
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <!-- Search -->
-        <div class="min-w-0 flex-1 sm:min-w-[200px]">
+        <div class="min-w-0 sm:flex-1">
           <label class="mb-1 block text-sm font-medium text-gray-700">ค้นหา</label>
           <div class="relative">
             <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none"
@@ -141,29 +141,31 @@ onMounted(() => {
         </div>
 
         <!-- Building -->
-        <div class="min-w-[240px]">
+        <div class="sm:min-w-[200px]">
           <label class="mb-1 block text-sm font-medium text-gray-700">อาคาร</label>
           <AppSelect v-model="selectedBuilding" :options="buildingOptions" class="w-full" />
         </div>
 
         <!-- Capacity -->
-        <div class="min-w-[130px]">
+        <div class="sm:min-w-[130px]">
           <label class="mb-1 block text-sm font-medium text-gray-700">ความจุขั้นต่ำ</label>
           <AppSelect v-model="selectedCapacity" :options="capacityOptions" class="w-full" />
         </div>
 
         <!-- Amenity -->
-        <div class="min-w-[160px]">
+        <div class="sm:min-w-[160px]">
           <label class="mb-1 block text-sm font-medium text-gray-700">อุปกรณ์</label>
           <AppSelect v-model="selectedAmenityId" :options="amenityOptions" class="w-full" />
         </div>
 
         <!-- Clear -->
-        <button v-if="searchQuery || selectedBuilding || selectedCapacity || selectedAmenityId !== null"
-          @click="clearFilters"
-          class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50">
-          ล้างตัวกรอง
-        </button>
+        <div v-if="searchQuery || selectedBuilding || selectedCapacity || selectedAmenityId !== null"
+          class="sm:self-end">
+          <button @click="clearFilters"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50">
+            ล้างตัวกรอง
+          </button>
+        </div>
       </div>
     </section>
 

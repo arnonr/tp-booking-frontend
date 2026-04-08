@@ -354,14 +354,14 @@ onMounted(() => {
 
     <!-- Toolbar -->
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-center gap-2">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
         <!-- Building Filter -->
         <AppSelect
           v-model="selectedBuildingId"
           :options="buildingOptions"
           :is-searchable="true"
           placeholder="ทุกอาคาร"
-          class="min-w-[240px]"
+          class="sm:min-w-[240px]"
         />
         <!-- Room Filter -->
         <AppSelect
@@ -369,7 +369,7 @@ onMounted(() => {
           :options="roomOptions"
           :is-searchable="true"
           placeholder="ทุกห้อง"
-          class="min-w-[180px]"
+          class="sm:min-w-[180px]"
         />
         <!-- Loading -->
         <div v-if="bookingStore.isLoading" class="flex items-center gap-1.5 text-sm text-gray-400">
