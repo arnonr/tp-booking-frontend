@@ -212,7 +212,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
       <div v-if="show" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 py-8"
         @click.self="emit('close')">
         <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="emit('close')" />
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" @click="emit('close')" />
 
         <!-- Panel -->
         <div class="bfm-panel relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
