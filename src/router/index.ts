@@ -120,7 +120,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'rooms',
         name: 'admin-rooms',
-        component: () => import('@/modules/rooms/pages/RoomList.vue'),
+        component: () => import('@/modules/admin/pages/AdminRoomManagement.vue'),
       },
       {
         path: 'rooms/create',

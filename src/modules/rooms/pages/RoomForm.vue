@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
 import AppSelect from '@/components/common/AppSelect.vue'
 import { useRoomStore } from '@/modules/rooms/stores/roomStore'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
 const store = useRoomStore()
+const { show: showToast } = useToast()
 
 const isEdit = computed(() => !!route.params.id)
 const roomId = computed(() => Number(route.params.id))
@@ -25,9 +29,20 @@ const form = ref({
 })
 
 const selectedAmenities = ref<number[]>([])
-const availableAmenities = ref<{ id: number; name: string }[]>([])
 const uploadedFiles = ref<File[]>([])
-const message = ref<{ type: 'success' | 'error'; text: string } | null>(null)
+
+// VueDatePicker time-picker เก็บ { hours, minutes }
+const pickerOpenTime = ref<{ hours: number; minutes: number } | null>(null)
+const pickerCloseTime = ref<{ hours: number; minutes: number } | null>(null)
+
+function timeStringToPickerValue(t: string): { hours: number; minutes: number } {
+  const [h, m] = t.split(':').map(Number)
+  return { hours: h, minutes: m }
+}
+function pickerValueToTimeString(v: { hours: number; minutes: number } | null): string {
+  if (!v) return ''
+  return `${String(v.hours).padStart(2, '0')}:${String(v.minutes).padStart(2, '0')}`
+}
 
 const slotDurationOptions = [
   { label: '30 นาที', value: 30 },
@@ -43,7 +58,6 @@ const statusOptions = [
 ]
 
 async function handleSubmit() {
-  message.value = null
   try {
     const payload = {
       name: form.value.name,
@@ -52,8 +66,8 @@ async function handleSubmit() {
       capacity: form.value.capacity,
       description: form.value.description || null,
       status: form.value.status,
-      openTime: form.value.openTime,
-      closeTime: form.value.closeTime,
+      openTime: pickerValueToTimeString(pickerOpenTime.value) || form.value.openTime,
+      closeTime: pickerValueToTimeString(pickerCloseTime.value) || form.value.closeTime,
       slotDurationMin: form.value.slotDurationMin,
     }
 
@@ -63,7 +77,7 @@ async function handleSubmit() {
       if (uploadedFiles.value.length > 0) {
         await store.uploadImages(roomId.value, uploadedFiles.value)
       }
-      message.value = { type: 'success', text: 'อัปเดตห้องสำเร็จ' }
+      showToast('อัปเดตห้องสำเร็จ', 'success')
     } else {
       const room = await store.createRoom(payload)
       if (room && selectedAmenities.value.length > 0) {
@@ -72,12 +86,12 @@ async function handleSubmit() {
       if (room && uploadedFiles.value.length > 0) {
         await store.uploadImages(room.id, uploadedFiles.value)
       }
-      message.value = { type: 'success', text: 'สร้างห้องสำเร็จ' }
+      showToast('สร้างห้องสำเร็จ', 'success')
       router.push('/admin/rooms')
       return
     }
   } catch {
-    message.value = { type: 'error', text: store.error ?? 'เกิดข้อผิดพลาด' }
+    showToast(store.error ?? 'เกิดข้อผิดพลาด', 'error')
   }
 }
 
@@ -102,6 +116,12 @@ async function removeImage(imageId: number) {
 }
 
 onMounted(async () => {
+  await store.fetchAmenities()
+
+  // init picker values from default form values
+  pickerOpenTime.value = timeStringToPickerValue(form.value.openTime)
+  pickerCloseTime.value = timeStringToPickerValue(form.value.closeTime)
+
   if (isEdit.value) {
     await store.fetchRoomById(roomId.value)
     const room = store.currentRoom
@@ -117,6 +137,8 @@ onMounted(async () => {
         closeTime: room.closeTime,
         slotDurationMin: room.slotDurationMin,
       }
+      pickerOpenTime.value = timeStringToPickerValue(room.openTime)
+      pickerCloseTime.value = timeStringToPickerValue(room.closeTime)
       selectedAmenities.value = room.amenities?.map((a) => a.id) ?? []
     }
   }
@@ -135,17 +157,6 @@ onMounted(async () => {
         </svg>
       </button>
       <h1 class="text-xl font-bold text-gray-900">{{ pageTitle }}</h1>
-    </div>
-
-    <!-- Message -->
-    <div
-      v-if="message"
-      :class="[
-        'rounded-lg px-4 py-3 text-sm',
-        message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700',
-      ]"
-    >
-      {{ message.text }}
     </div>
 
     <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -209,18 +220,22 @@ onMounted(async () => {
         <div class="grid gap-4 sm:grid-cols-3">
           <div>
             <label class="block text-sm font-medium text-gray-700">เวลาเปิด</label>
-            <input
-              v-model="form.openTime"
-              type="time"
-              class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            <VueDatePicker
+              v-model="pickerOpenTime"
+              time-picker
+              :minutes-increment="30"
+              placeholder="เลือกเวลา"
+              class="mt-1"
             />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">เวลาปิด</label>
-            <input
-              v-model="form.closeTime"
-              type="time"
-              class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            <VueDatePicker
+              v-model="pickerCloseTime"
+              time-picker
+              :minutes-increment="30"
+              placeholder="เลือกเวลา"
+              class="mt-1"
             />
           </div>
           <div>
@@ -242,6 +257,30 @@ onMounted(async () => {
           :options="statusOptions"
           class="w-full sm:w-56"
         />
+      </div>
+
+      <!-- Amenities -->
+      <div class="rounded-xl border border-gray-200 bg-white p-6">
+        <h2 class="mb-4 text-lg font-semibold text-gray-900">Amenities</h2>
+        <div v-if="store.amenityLoading" class="text-sm text-gray-500">กำลังโหลด...</div>
+        <div v-else-if="store.amenities.length === 0" class="text-sm text-gray-400">ยังไม่มี amenity ในระบบ</div>
+        <div v-else class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <label
+            v-for="amenity in store.amenities"
+            :key="amenity.id"
+            class="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm transition hover:bg-blue-50"
+            :class="selectedAmenities.includes(amenity.id) ? 'border-blue-400 bg-blue-50' : ''"
+          >
+            <input
+              type="checkbox"
+              :value="amenity.id"
+              v-model="selectedAmenities"
+              class="h-4 w-4 rounded text-blue-600"
+            />
+            <span v-if="amenity.icon" class="text-base">{{ amenity.icon }}</span>
+            <span class="text-gray-700">{{ amenity.name }}</span>
+          </label>
+        </div>
       </div>
 
       <!-- Images (edit mode) -->

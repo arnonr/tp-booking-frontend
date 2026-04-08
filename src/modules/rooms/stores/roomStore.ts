@@ -1,14 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/plugins/axios'
-import type { Room, AvailabilitySlot, PaginatedResponse } from '@/types'
+import type { Room, Amenity, AvailabilitySlot, PaginatedResponse } from '@/types'
 
 export const useRoomStore = defineStore('room', () => {
   const rooms = ref<Room[]>([])
   const currentRoom = ref<Room | null>(null)
   const availability = ref<AvailabilitySlot[]>([])
+  const amenities = ref<Amenity[]>([])
   const isLoading = ref(false)
   const availabilityLoading = ref(false)
+  const amenityLoading = ref(false)
   const error = ref<string | null>(null)
   const pagination = ref({ page: 1, limit: 10, total: 0 })
 
@@ -195,12 +197,72 @@ export const useRoomStore = defineStore('room', () => {
     }
   }
 
+  async function fetchAmenities() {
+    amenityLoading.value = true
+    error.value = null
+    try {
+      const { data } = await api.get<Amenity[]>('/amenities')
+      amenities.value = Array.isArray(data) ? data : (data as any)?.data ?? []
+    } catch (e: unknown) {
+      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'โหลด amenity ไม่สำเร็จ'
+    } finally {
+      amenityLoading.value = false
+    }
+  }
+
+  async function createAmenity(form: { name: string; icon?: string }) {
+    amenityLoading.value = true
+    error.value = null
+    try {
+      const { data } = await api.post<Amenity>('/amenities', form)
+      amenities.value.push(data)
+      return data
+    } catch (e: unknown) {
+      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'เพิ่ม amenity ไม่สำเร็จ'
+      throw e
+    } finally {
+      amenityLoading.value = false
+    }
+  }
+
+  async function updateAmenity(id: number, form: { name: string; icon?: string }) {
+    amenityLoading.value = true
+    error.value = null
+    try {
+      const { data } = await api.put<Amenity>(`/amenities/${id}`, form)
+      const idx = amenities.value.findIndex((a) => a.id === id)
+      if (idx !== -1) amenities.value[idx] = data
+      return data
+    } catch (e: unknown) {
+      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'แก้ไข amenity ไม่สำเร็จ'
+      throw e
+    } finally {
+      amenityLoading.value = false
+    }
+  }
+
+  async function deleteAmenity(id: number) {
+    amenityLoading.value = true
+    error.value = null
+    try {
+      await api.delete(`/amenities/${id}`)
+      amenities.value = amenities.value.filter((a) => a.id !== id)
+    } catch (e: unknown) {
+      error.value = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'ลบ amenity ไม่สำเร็จ'
+      throw e
+    } finally {
+      amenityLoading.value = false
+    }
+  }
+
   return {
     rooms,
     currentRoom,
     availability,
+    amenities,
     isLoading,
     availabilityLoading,
+    amenityLoading,
     error,
     pagination,
     fetchRooms,
@@ -214,5 +276,9 @@ export const useRoomStore = defineStore('room', () => {
     uploadImages,
     deleteImage,
     updateAmenities,
+    fetchAmenities,
+    createAmenity,
+    updateAmenity,
+    deleteAmenity,
   }
 })

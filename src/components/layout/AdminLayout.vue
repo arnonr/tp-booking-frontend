@@ -44,7 +44,7 @@ import AppFooter from './AppFooter.vue'
 
         <!-- Content -->
         <main class="flex-1">
-          <slot />
+          <router-view />
         </main>
       </div>
     </div>
