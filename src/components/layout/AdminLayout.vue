@@ -12,31 +12,38 @@ import AppFooter from './AppFooter.vue'
         <aside class="w-56 shrink-0">
           <nav class="space-y-1 rounded-lg bg-white p-4 shadow-sm">
             <router-link to="/admin/dashboard"
-              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              active-class="bg-indigo-50 text-indigo-600 font-medium">
               Dashboard
             </router-link>
             <router-link to="/admin/users"
-              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              active-class="bg-indigo-50 text-indigo-600 font-medium">
               จัดการพนักงาน
             </router-link>
             <router-link to="/admin/rooms"
-              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              active-class="bg-indigo-50 text-indigo-600 font-medium">
               จัดการห้อง
             </router-link>
             <router-link to="/admin/approvals"
-              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              active-class="bg-indigo-50 text-indigo-600 font-medium">
               อนุมัติการจอง
             </router-link>
             <router-link to="/admin/external-requests"
-              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              active-class="bg-indigo-50 text-indigo-600 font-medium">
               คำขอคนนอก
             </router-link>
             <router-link to="/admin/reports"
-              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              active-class="bg-indigo-50 text-indigo-600 font-medium">
               รายงาน
             </router-link>
             <router-link to="/admin/feedback"
-              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600">
+              class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              active-class="bg-indigo-50 text-indigo-600 font-medium">
               Feedback
             </router-link>
           </nav>
