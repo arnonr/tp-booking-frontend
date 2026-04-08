@@ -31,21 +31,21 @@ import AppFooter from './AppFooter.vue'
               active-class="bg-indigo-50 text-indigo-600 font-medium">
               อนุมัติการจอง
             </router-link>
-            <router-link to="/admin/external-requests"
+            <!-- <router-link to="/admin/external-requests"
               class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
               active-class="bg-indigo-50 text-indigo-600 font-medium">
               คำขอคนนอก
-            </router-link>
+            </router-link> -->
             <router-link to="/admin/reports"
               class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
               active-class="bg-indigo-50 text-indigo-600 font-medium">
               รายงาน
             </router-link>
-            <router-link to="/admin/feedback"
+            <!-- <router-link to="/admin/feedback"
               class="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
               active-class="bg-indigo-50 text-indigo-600 font-medium">
               Feedback
-            </router-link>
+            </router-link> -->
           </nav>
         </aside>
 
