@@ -18,7 +18,7 @@ export default defineConfig({
         target: 'https://technopark.kmutnb.ac.th/tp-booking',
         changeOrigin: true,
       },
-      '/uploads': {
+      '/tp-booking-api/uploads': {
         target: 'http://localhost:4025',
         changeOrigin: true,
       },
