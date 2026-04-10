@@ -15,7 +15,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:4025',
+        target: 'https://technopark.kmutnb.ac.th/tp-booking',
         changeOrigin: true,
       },
       '/uploads': {
